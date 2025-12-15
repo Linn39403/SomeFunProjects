@@ -64,7 +64,7 @@ void process_input_data(FILE *input)
     // Read data in chunks
     //[TODO] able to change the BUFFER_SIZE accoring to the argument value
     // if default read bytes size is greater than the arg size ( -n )
-    if (length_option < buffer_read_size)
+    if ((length_option != 0) && (length_option < buffer_read_size))
     {
         buffer_read_size = length_option;
     }
@@ -132,25 +132,47 @@ void process_file(const char *filename)
 
 void search_options(int argc, char *argv[], int *i)
 {
-    if ((memcmp(argv[*i], "-h", strlen("-h")) == 0) || (memcmp(argv[*i], "--help", strlen("--help")) == 0))
+    static const char HELP_SHORT[] = "-h";
+    static const char HELP_LONG[] = "--help";
+    static const char CANONICAL_SHORT[] = "-C";
+    static const char CANONICAL_LONG[] = "--canonical";
+    static const char LENGTH_SHORT[] = "-n";
+    static const char LENGTH_LONG[] = "--length";
+
+#define STRLEN(s) (sizeof(s) - 1)
+
+    enum
+    {
+        HELP_SHORT_SIZE = STRLEN(HELP_SHORT),
+        HELP_LONG_SIZE = STRLEN(HELP_LONG),
+        CANONICAL_SHORT_SIZE = STRLEN(CANONICAL_SHORT),
+        CANONICAL_LONG_SIZE = STRLEN(CANONICAL_LONG),
+        LENGTH_SHORT_SIZE = STRLEN(LENGTH_SHORT),
+        LENGTH_LONG_SIZE = STRLEN(LENGTH_LONG)
+    };
+
+    if ((memcmp(argv[*i], HELP_SHORT, HELP_SHORT_SIZE) == 0) || (memcmp(argv[*i], HELP_LONG, HELP_LONG_SIZE) == 0))
     {
         print_usage();
     }
-    if ((memcmp(argv[*i], "-C", strlen("-C")) == 0) || (memcmp(argv[*i], "--canonical", strlen("--canonical")) == 0))
+    else if ((memcmp(argv[*i], CANONICAL_SHORT, CANONICAL_SHORT_SIZE) == 0) || (memcmp(argv[*i], CANONICAL_LONG, CANONICAL_LONG_SIZE) == 0))
     {
         canonical_option = 1;
     }
-    if ((memcmp(argv[*i], "-n", strlen("-n")) == 0) || (memcmp(argv[*i], "--length", strlen("--length")) == 0))
+    else if ((memcmp(argv[*i], LENGTH_SHORT, LENGTH_SHORT_SIZE) == 0) || (memcmp(argv[*i], LENGTH_LONG, LENGTH_LONG_SIZE) == 0))
     {
         if (*i + 1 >= argc)
         {
             fprintf(stderr, "%s: -n/--length needs a number\n", PROGRAM_NAME);
             exit(1);
         }
-        if(argv[*i+1][0] == '0' && argv[*i+1][1] == 'x'){
-            //this is hex input 
+        if (argv[*i + 1][0] == '0' && argv[*i + 1][1] == 'x')
+        {
+            // this is hex input
             length_option = (uint32_t)strtoul(argv[*i + 1], NULL, 16);
-        }else{
+        }
+        else
+        {
             length_option = (uint32_t)strtoul(argv[*i + 1], NULL, 10);
         }
         (*i)++; // consume the number
