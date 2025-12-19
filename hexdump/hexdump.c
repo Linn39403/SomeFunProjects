@@ -11,12 +11,12 @@ void search_options(int argc, char *argv[], int *i);
 void process_file(const char *filename);
 
 int canonical_option = -1;
+int decimal_option = -1;
 uint32_t length_option = 0;
 char *file_to_read = NULL;
 
 int main(int argc, char *argv[])
 {
-    printf("argc = %d\n", argc);
     if (argc < 2)
     {
         print_usage();
@@ -138,6 +138,8 @@ void search_options(int argc, char *argv[], int *i)
     static const char CANONICAL_LONG[] = "--canonical";
     static const char LENGTH_SHORT[] = "-n";
     static const char LENGTH_LONG[] = "--length";
+    static const char DECIMAL_SHORT[] = "-d";
+    static const char DECIMAL_LONG[] = "--two-bytes-decimal";
 
 #define STRLEN(s) (sizeof(s) - 1)
 
@@ -148,7 +150,9 @@ void search_options(int argc, char *argv[], int *i)
         CANONICAL_SHORT_SIZE = STRLEN(CANONICAL_SHORT),
         CANONICAL_LONG_SIZE = STRLEN(CANONICAL_LONG),
         LENGTH_SHORT_SIZE = STRLEN(LENGTH_SHORT),
-        LENGTH_LONG_SIZE = STRLEN(LENGTH_LONG)
+        LENGTH_LONG_SIZE = STRLEN(LENGTH_LONG),
+        DECIMAL_SHORT_SIZE = STRLEN(DECIMAL_SHORT),
+        DECIMAL_LONG_SIZE = STRLEN(DECIMAL_LONG)
     };
 
     if ((memcmp(argv[*i], HELP_SHORT, HELP_SHORT_SIZE) == 0) || (memcmp(argv[*i], HELP_LONG, HELP_LONG_SIZE) == 0))
@@ -158,6 +162,10 @@ void search_options(int argc, char *argv[], int *i)
     else if ((memcmp(argv[*i], CANONICAL_SHORT, CANONICAL_SHORT_SIZE) == 0) || (memcmp(argv[*i], CANONICAL_LONG, CANONICAL_LONG_SIZE) == 0))
     {
         canonical_option = 1;
+    }
+    else if ((memcmp(argv[*i], DECIMAL_SHORT, DECIMAL_SHORT_SIZE) == 0) || (memcmp(argv[*i], DECIMAL_LONG, DECIMAL_LONG_SIZE) == 0))
+    {
+        decimal_option = 1;
     }
     else if ((memcmp(argv[*i], LENGTH_SHORT, LENGTH_SHORT_SIZE) == 0) || (memcmp(argv[*i], LENGTH_LONG, LENGTH_LONG_SIZE) == 0))
     {
@@ -185,4 +193,5 @@ void print_usage(void)
     printf("Options:\n");
     printf("-C, --canonical           canonical hex+ASCII display\n");
     printf("-n, --length <length>     interpret only length bytes of input\n");
+    printf("-d, --two-bytes-decimal   Display the input offset in \n");
 }
