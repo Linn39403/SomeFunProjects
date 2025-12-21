@@ -62,7 +62,6 @@ void process_input_data(FILE *input)
     size_t total_bytes_read = 0x00;
     size_t buffer_read_size = BUFFER_SIZE;
     // Read data in chunks
-    //[TODO] able to change the BUFFER_SIZE accoring to the argument value
     // if default read bytes size is greater than the arg size ( -n )
     if ((length_option != 0) && (length_option < buffer_read_size))
     {
@@ -72,10 +71,22 @@ void process_input_data(FILE *input)
     {
         printf("%08lx ", total_bytes_read);
         total_bytes_read += bytes_read;
-        for (uint32_t i = 0; i < bytes_read; i++)
+        if(decimal_option == -1) 
         {
-            unsigned char buf = buffer[i];
-            printf("%02x ", buf);
+          for (uint32_t i = 0; i < bytes_read; i++)
+          {
+              unsigned char buf = buffer[i];
+              printf("%02x ", buf);
+          }
+        }
+        else if(decimal_option == 1)
+        {
+          for (uint32_t i = 0; i < bytes_read-1; i+=2)
+          {
+              unsigned int buf = atoi((const char *)&buffer[i]) << 8; 
+              buf |= atoi((const char*)&buffer[i+1]);
+              printf("%d ", buf);
+          }
         }
 
         // print ASCII characters option
@@ -193,5 +204,6 @@ void print_usage(void)
     printf("Options:\n");
     printf("-C, --canonical           canonical hex+ASCII display\n");
     printf("-n, --length <length>     interpret only length bytes of input\n");
-    printf("-d, --two-bytes-decimal   Display the input offset in \n");
+    printf("-d, --two-bytes-decimal   Display the input offset in hexadecimal, followed by 8 space-separaated, five column, zero-filled, two-byte units of input data\n");
+    printf("                          in unsigned decimal, per line.\n");
 }
