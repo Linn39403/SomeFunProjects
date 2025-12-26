@@ -6,134 +6,118 @@
 #define PROGRAM_NAME "hexdump"
 #define BUFFER_SIZE 16
 
+// Function Prototypes
 void print_usage();
 void search_options(int argc, char *argv[], int *i);
 void process_file(const char *filename);
+void remove_non_printable_ascii_char(unsigned char *buffer, size_t size);
+void format_line(char *output_payload, unsigned char *buffer, size_t bytes_read);
 
+// Global Options
 int canonical_option = -1;
 int decimal_option = -1;
 uint32_t length_option = 0;
 char *file_to_read = NULL;
 
-int main(int argc, char *argv[])
-{
-    if (argc < 2)
-    {
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
         print_usage();
+        return 0;
     }
-    else
-    {
-        for (int i = 1; i < argc; i++)
-        {
-            if (argv[i][0] == '-')
-            {
-                search_options(argc, argv, &i);
-            }
-            else
-            {
-                file_to_read = argv[i];
-            }
+
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-') {
+            search_options(argc, argv, &i);
+        } else {
+            file_to_read = argv[i];
         }
     }
 
-    if (file_to_read)
-    {
+    if (file_to_read) {
         process_file(file_to_read);
     }
 
     return 0;
 }
 
-void remove_non_printable_ascii_char(unsigned char *buffer)
-{
-    for (int i = 0; i < BUFFER_SIZE; i++)
-    {
-        if (buffer[i] < '!' || buffer[i] > '~')
-        {
-            // replace non printable char with '.'
+void remove_non_printable_ascii_char(unsigned char *buffer, size_t size) {
+    for (size_t i = 0; i < size; i++) {
+        if (buffer[i] < ' ' || buffer[i] > '~') { // Improved range check
             buffer[i] = '.';
         }
     }
 }
-void process_input_data(FILE *input)
-{
-    unsigned char buffer[BUFFER_SIZE + 1] = {0};
-    size_t bytes_read;
-    size_t total_bytes_read = 0x00;
-    size_t buffer_read_size = BUFFER_SIZE;
-    // Read data in chunks
-    // if default read bytes size is greater than the arg size ( -n )
-    if ((length_option != 0) && (length_option < buffer_read_size))
-    {
-        buffer_read_size = length_option;
-    }
-    while ((bytes_read = fread(buffer, sizeof(char), buffer_read_size, input)) > 0)
-    {
-        printf("%08lx ", total_bytes_read);
-        total_bytes_read += bytes_read;
-        if(decimal_option == -1) 
-        {
-          for (uint32_t i = 0; i < bytes_read; i++)
-          {
-              unsigned char buf = buffer[i];
-              printf("%02x ", buf);
-          }
-        }
-        else if(decimal_option == 1)
-        {
-          for (uint32_t i = 0; i < bytes_read-1; i+=2)
-          {
-              unsigned int buf = atoi((const char *)&buffer[i]) << 8; 
-              buf |= atoi((const char*)&buffer[i+1]);
-              printf("%d ", buf);
-          }
-        }
 
-        // print ASCII characters option
-        if (canonical_option != -1)
-        {
-            remove_non_printable_ascii_char(buffer);
-            // if the hex data is not algign to the BUFFER_SIZE
-            // we need to fill up the reamining with spaces
-            if (bytes_read < buffer_read_size + 1)
-            {
-                for (uint32_t i = bytes_read; i < BUFFER_SIZE; i++)
-                    printf("   ");
-            }
+/**
+ * Refactored: Logic only. 
+ * Formats a single line of data into the provided char buffer.
+ */
+void format_line(char *out, unsigned char *buffer, size_t bytes_read) {
+    char temp[64] = {0};
+    out[0] = '\0';
 
-            // there is an extra space before ascii start
-            printf(" |");
-            for (uint32_t i = 0; i < bytes_read; i++)
-            {
-                char buf = buffer[i];
-                printf("%c", buf);
-            }
-            printf("|");
+    if (decimal_option == 1) {
+        uint32_t i;
+        for (i = 0; i < bytes_read - 1; i += 2) {
+            uint16_t val = (buffer[i + 1] << 8) | buffer[i];
+            sprintf(temp, "  %05u ", val);
+            strcat(out, temp);
         }
-        memset(buffer, 0, ((buffer_read_size + 1) * sizeof(unsigned char)));
-        printf("\n");
-
-        if (length_option != 0)
-        {
-            if (total_bytes_read >= length_option)
-            {
-                break;
-            }
-            else if ((length_option - total_bytes_read) < buffer_read_size)
-            {
-                buffer_read_size = (length_option - total_bytes_read);
-            }
+        if (i < bytes_read) {
+            sprintf(temp, "  %05u ", buffer[i]);
+            strcat(out, temp);
+        }
+    } else {
+        for (uint32_t i = 0; i < bytes_read; i++) {
+            sprintf(temp, "%02x ", buffer[i]);
+            strcat(out, temp);
         }
     }
-    // after printing all, let's print the totoal size
-    printf("%08lx\n", total_bytes_read);
+
+    if (canonical_option == 1) {
+        // Alignment padding
+        if (bytes_read < BUFFER_SIZE) {
+            int pad = (BUFFER_SIZE - bytes_read) * (decimal_option == 1 ? 4 : 3);
+            for (int i = 0; i < pad; i++) strcat(out, " ");
+        }
+
+        strcat(out, " |");
+        unsigned char ascii_buf[BUFFER_SIZE + 1];
+        memcpy(ascii_buf, buffer, bytes_read);
+        remove_non_printable_ascii_char(ascii_buf, bytes_read);
+        ascii_buf[bytes_read] = '\0';
+        strcat(out, (char *)ascii_buf);
+        strcat(out, "|");
+    }
 }
 
-void process_file(const char *filename)
-{
+void process_input_data(FILE *input) {
+    unsigned char buffer[BUFFER_SIZE] = {0};
+    char output_line[256];
+    size_t bytes_read;
+    size_t total_bytes_read = 0;
+    size_t to_read = (length_option > 0 && length_option < BUFFER_SIZE) ? length_option : BUFFER_SIZE;
+
+    while ((bytes_read = fread(buffer, 1, to_read, input)) > 0) {
+        printf("%08lx ", (unsigned long)total_bytes_read);
+        
+        format_line(output_line, buffer, bytes_read);
+        printf("%s\n", output_line);
+
+        total_bytes_read += bytes_read;
+        if (length_option > 0) {
+            if (total_bytes_read >= length_option) break;
+            if (length_option - total_bytes_read < BUFFER_SIZE)
+                to_read = length_option - total_bytes_read;
+        }
+        memset(buffer, 0, BUFFER_SIZE);
+    }
+    printf("%08lx\n", (unsigned long)total_bytes_read);
+}
+
+void process_file(const char *filename) {
     FILE *input_f = fopen(filename, "rb");
-    if (input_f == NULL)
-    {
+    if (!input_f) {
         fprintf(stderr, "%s: cannot open %s\n", PROGRAM_NAME, filename);
         return;
     }
