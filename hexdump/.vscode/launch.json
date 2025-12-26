@@ -9,9 +9,9 @@
       "preLaunchTask": "C/C++: gcc build active file",
       "program": "${fileDirname}/${fileBasenameNoExtension}",
       "args": [
-//        "-n",
-//        "10",
-        "-C",
+        "-n",
+        "10",
+        "-d",
         "${workspaceFolder}/hexdump.c",
       ],
       "cwd": "${fileDirname}",
