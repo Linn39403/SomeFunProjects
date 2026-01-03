@@ -23,10 +23,14 @@ gameEventTime2 = 0
 stringCount = int(windowWidth / 20) - 1
 stringSpeed = []
 
-rd.seed(datetime.now())
+#rd.seed(datetime.now())
+rd.seed(time.time())
 pygame.init()
 pygame.display.set_caption('Matrix Rain Code Animation in Burmese')
-font = pygame.font.SysFont("myanmartext", 10)
+
+#font = pygame.font.Font("mmrtext.ttf", 10)
+font = pygame.font.Font("NotoSansMyanmar-Regular.ttf", 10)
+
 clock = pygame.time.Clock()
 
 for i in range(0,stringCount):
